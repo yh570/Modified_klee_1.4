@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
+#include <string>
+
 #include "Executor.h"
 #include "Context.h"
 #include "CoreStats.h"
@@ -96,9 +99,10 @@ using namespace llvm;
 using namespace klee;
 
 
-
-
-
+int bug263_flag = 0;
+std::string target = ("lava_get(i32 15, i32 263,");
+std::string lava_flag = ("lava_get");
+int call_flag = 0;
 namespace {
   cl::opt<bool>
   DumpStatesOnHalt("dump-states-on-halt",
@@ -1185,13 +1189,82 @@ void Executor::executeCall(ExecutionState &state,
                            Function *f,
                            std::vector< ref<Expr> > &arguments) {
   Instruction *i = ki->inst;
+  if (strcmp(f->getName().str().c_str(),"printf") == 0){
+    klee_warning("XXXXXXXXXXXXXXXXXXXXXXXXXXXX %s is found XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n", f->getName().str().c_str());
+  }
   if (f && f->isDeclaration()) {
     switch(f->getIntrinsicID()) {
-    case Intrinsic::not_intrinsic:
+    case Intrinsic::not_intrinsic:{
+      // =================
+      //if (strcmp(f->getName().str().c_str(),"printf") == 0){
+      //  executeMemoryOperation(state, false, arguments[0], 0, ki);
+      //}
       // state may be destroyed by this call, cannot touch
+
+
+
+
+
+      // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      const InstructionInfo &li = *ki->info;
+      std::string file_path = li.file.c_str();
+      std::cout << "~~~~~~~~~~ " << file_path << ":" << li.line << std::endl;
+      std::string user_df = ("toy");
+      //if (file_path.find(user_df) != std::string::npos) {
+      if(true){
+        //std::string str1 = f->getName().str();
+        //std::string str2 = ("decode_4");
+        //if (str1.find(str2) != std::string::npos) {
+        call_flag = 1;
+        // ====================
+        const FunctionType *fType1 = dyn_cast<FunctionType>(cast<PointerType>(f->getType())->getElementType());
+        Instruction* ins ;
+        std::string str_out;
+        llvm::raw_string_ostream str_out_stream(str_out);
+        getLastNonKleeInternalInstruction(state,&ins);
+      
+        str_out_stream << "Instruction: " << *ins;
+        std::cout << "Yo yo check it out: " << str_out_stream.str() << std::endl;
+        unsigned func_Args = arguments.size();
+        for (unsigned i = 0; i < func_Args; i++) {
+
+          std::string str;
+          std::string count;
+          llvm::raw_string_ostream count_stream(count);
+          llvm::raw_string_ostream string_stream(str);
+          count_stream << i;
+          std::cout << "++++++++++++++++ The count is: " << count_stream.str() << std::endl; 
+          (*fType1->getParamType(i)).print(string_stream);
+          std::cout << "================ Yo yo check it out: " << func_Args << ", " << string_stream.str() << std::endl;
+
+          std::string str3 = string_stream.str();
+          std::string str4 = ("*");
+          std::string str5 = ("**");
+          if ((str3.find(str4) != std::string::npos) && (str3.find(str5) == std::string::npos)) {
+          //Ty->isSized()
+        //if (strcmp(string_stream.str().c_str(), "i8*") == 0) {
+            if (ki->inst->getType()->isSized()) {
+	      if (true){
+              //if (strcmp(f->getName().str().c_str(),"strcmp") != 0 && (strcmp(f->getName().str().c_str(),"fopen") != 0) &&(strcmp(f->getName().str().c_str(),"fwrite_unlocked") != 0) \
+                && (strcmp(f->getName().str().c_str(),"memchr") != 0) ){
+                printf("XXXX running executeMemoryOperation XXXXXXX\n");
+                executeMemoryOperation(state, false, arguments[i], 0, ki);
+              }
+            }
+            else {
+              printf("Size is unkown\n");
+            }
+          }
+        }
+      //====================== 
+      call_flag = 0;
+      }
+        
+
+ 
       callExternalFunction(state, ki, f, arguments);
       break;
-        
+    }        
       // va_arg is handled by caller and intrinsic lowering, see comment for
       // ExecutionState::varargs
     case Intrinsic::vastart:  {
@@ -1438,6 +1511,25 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
+  /*
+  Instruction* ins ;
+  std::string str;
+  llvm::raw_string_ostream string_stream(str);
+  getLastNonKleeInternalInstruction(state, &ins);
+  string_stream << "Instruction: " << *ins << "\n";
+  //if (string_stream.str().find(lava_flag) != std::string::npos) {
+  //    std::cout << string_stream.str() << std::endl;
+  //}
+  if (bug263_flag == 0){
+    if (string_stream.str().find(target) != std::string::npos) {
+      std::cout << string_stream.str() << std::endl;
+      bug263_flag = 1;
+      terminateStateForPath(state, "Generate ktest for shortest path");
+    }
+  }
+  */
+
+
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
     // Control flow
@@ -2784,6 +2876,13 @@ void Executor::terminateState(ExecutionState &state) {
     processTree->remove(state.ptreeNode);
     delete &state;
   }
+}
+
+void Executor::terminateStateForPath(ExecutionState &state,
+                                   const Twine &message) {
+  interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
+                                        "path");
+  terminateState(state);                
 }
 
 void Executor::terminateStateEarly(ExecutionState &state, 
